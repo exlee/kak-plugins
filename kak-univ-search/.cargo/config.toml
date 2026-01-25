@@ -1,0 +1,11 @@
+[target.aarch64-apple-darwin]
+rustflags = [
+    "-C", "link-arg=-dead_strip",      # Removes unreachable code/data at link time
+]
+
+[target.x86_64-apple-darwin]
+rustflags = [
+    "-C", "link-arg=-dead_strip",
+    "-C", "link-arg=-S"
+]
+
