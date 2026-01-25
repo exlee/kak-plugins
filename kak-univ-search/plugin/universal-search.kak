@@ -1,4 +1,12 @@
 provide-module -override kak-univ-search %{
+  define-command -hidden -override universal-search-prompt-done %{
+    select 1.1,1.1
+    unset-face window PrimaryCursor
+  }
+  define-command -hidden -override universal-search-prompt-setup %{
+    ansi-enable
+    set-face window PrimaryCursor background
+  }
   define-command restart-univ-search -docstring "(Re)starts kak-univ-search helper" %{
     nop %sh{
       kak-univ-search -d
@@ -7,65 +15,65 @@ provide-module -override kak-univ-search %{
   restart-univ-search
   define-command -override universal-search-rg %{
     edit! -scratch *rg*
-    ansi-enable
+    universal-search-prompt-setup
     set buffer filetype grep
     prompt -on-change %{
       nop %sh{
       printf "rg\0%s\0%s\0%s\0%s\0\0" $kak_session $kak_client "$PWD" "$kak_text" > /tmp/kak-univ-search
       }
-    } "(rg)> " nop
+    } "(rg)> " universal-search-prompt-done
   }
 
   define-command -override universal-search-fd %{
     edit! -scratch *fd*
-    ansi-enable
+    universal-search-prompt-setup
     map buffer normal <ret> x_gf
     prompt -on-change %{
       nop %sh{
       printf "fd\0%s\0%s\0%s\0%s\0\0" $kak_session $kak_client "$PWD" "$kak_text" > /tmp/kak-univ-search
       }
-    } "(fd)> " nop
+    } "(fd)> " universal-search-prompt-done
   }
   define-command -override universal-search-fzf %{
     edit! -scratch *fzf*
-    ansi-enable
+    universal-search-prompt-setup
     map buffer normal <ret> x_gf
     prompt -on-change %{
       nop %sh{
       printf "fzf\0%s\0%s\0%s\0%s\0\0" $kak_session $kak_client "$PWD" "$kak_text" > /tmp/kak-univ-search
       }
-    } "(fzf)> " nop
+    } "(fzf)> " universal-search-prompt-done
   }
   define-command -override universal-search-global-definition %{
     edit! -scratch *global*
-    ansi-enable
+    universal-search-prompt-setup
     set buffer filetype grep
     prompt -on-change %{
       nop %sh{
       printf "global\0%s\0%s\0%s\0%s\0\0" $kak_session $kak_client "$PWD" "-d $kak_text" > /tmp/kak-univ-search
       }
-    } "(def)> " nop
+    } "(def)> " universal-search-prompt-done
   }
 
   define-command -override universal-search-global-grep %{
     edit! -scratch *global*
-    ansi-enable
+    universal-search-prompt-setup
     set buffer filetype grep
     prompt -on-change %{
       nop %sh{
       printf "global\0%s\0%s\0%s\0%s\0\0" $kak_session $kak_client "$PWD" "-g $kak_text" > /tmp/kak-univ-search
       }
-    } "(grep)> " nop
+    } "(grep)> " universal-search-prompt-done
   }
   define-command -override universal-search-global-ref %{
     edit! -scratch *global*
-    ansi-enable
+    universal-search-prompt-setup
     set buffer filetype grep
     prompt -on-change %{
       nop %sh{
       printf "global\0%s\0%s\0%s\0%s\0\0" $kak_session $kak_client "$PWD" "$kak_text" > /tmp/kak-univ-search
       }
-    } "(ref)> " nop
+    } "(ref)> " universal-search-prompt-done
   }
   declare-option str universal_search_buffer_search 
   declare-option str universal_search_temp_buffer_file "/tmp/kak-univ.%val{session}"
@@ -73,14 +81,17 @@ provide-module -override kak-univ-search %{
     set-option global universal_search_buffer_search %val{buffile}
     write -sync -force -method overwrite %opt{universal_search_temp_buffer_file}
     edit! -scratch *buffer-search*
-    ansi-enable
+    universal-search-prompt-setup
     map buffer normal <ret> %|ght:y:edit %opt{universal_search_buffer_search} <c-r>"<ret>|
     set buffer filetype grep
     prompt -on-change %{
       nop %sh{
       printf "buffer-search\0%s\0%s\0%s\0%s\0%s\0\0" $kak_session $kak_client "$PWD" "$kak_opt_universal_search_temp_buffer_file" "$kak_text" > /tmp/kak-univ-search
       }
-    } "(buffer)> " %{nop %sh{"rm $kak_opt_universal_search_temp_buffer_file"}}
+    } "(buffer)> " %{
+      nop %sh{"rm $kak_opt_universal_search_temp_buffer_file"}
+      universal-search-prompt-done
+    }
   }
   define-command -override universal-search-open-buffer-list %{
     edit! -scratch *buffer-list-search*
@@ -93,12 +104,15 @@ provide-module -override kak-univ-search %{
   define-command -override universal-search-buffer-list %{
 		universal-search-open-buffer-list
     write -sync -force -method overwrite %opt{universal_search_temp_buffer_file}
-    ansi-enable
+    universal-search-prompt-setup
     prompt -on-change %{
       nop %sh{
       printf "buffer-list-search\0%s\0%s\0%s\0%s\0%s\0\0" $kak_session $kak_client "$PWD" "$kak_opt_universal_search_temp_buffer_file" "$kak_text" > /tmp/kak-univ-search
       }
-    } "(buffer)> " %{nop %sh{"rm $kak_opt_universal_search_temp_buffer_file"}}
+    } "(buffer)> " %{
+      nop %sh{"rm $kak_opt_universal_search_temp_buffer_file"}
+      universal-search-prompt-done
+    }
   }
 
 
