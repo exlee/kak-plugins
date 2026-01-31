@@ -31,6 +31,7 @@ pub async fn process(context: Arc<Context>, args: &[String], kak: &Kakoune) -> i
 
     let mut cmd = Command::new(fd_path)
         .arg("--color=always")
+        .arg("-p")
         .args(splitted_args)
         .arg("-tf")
         .current_dir(cwd)
