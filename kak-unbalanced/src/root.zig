@@ -15,6 +15,8 @@ const ScanState = enum {
     backtick_fence,
 };
 
+const single_quote: u8 = '\'';
+
 pub fn findUnbalanced(
     allocator: std.mem.Allocator,
     source: []const u8,
@@ -46,6 +48,22 @@ pub fn findUnbalanced(
                     advance(source[index .. index + 3], &line, &column);
                     index += 3;
                     continue;
+                }
+
+                // Skip single-quoted bracket literals like '(' or '{'
+                if (remaining.len >= 3 and remaining[0] == single_quote) {
+                    const inner = remaining[1];
+                    if (remaining[2] == single_quote and isBracket(inner)) {
+                        advance(source[index .. index + 3], &line, &column);
+                        index += 3;
+                        continue;
+                    }
+                    // Handle escaped single-quoted char like '\('
+                    if (remaining.len >= 4 and remaining[1] == '\\' and remaining[3] == single_quote) {
+                        advance(source[index .. index + 4], &line, &column);
+                        index += 4;
+                        continue;
+                    }
                 }
 
                 const byte = source[index];
@@ -145,6 +163,13 @@ fn advance(bytes: []const u8, line: *usize, column: *usize) void {
     }
 }
 
+fn isBracket(byte: u8) bool {
+    return switch (byte) {
+        '(', ')', '[', ']', '{', '}' => true,
+        else => false,
+    };
+}
+
 fn lessThanOffset(_: void, lhs: Position, rhs: Position) bool {
     return lhs.offset < rhs.offset;
 }
@@ -180,13 +205,21 @@ test "ignores brackets inside double quotes" {
     try std.testing.expectEqual(@as(usize, 0), positions.len);
 }
 
-test "checks brackets inside single quotes" {
+test "ignores brackets inside single quotes" {
     const allocator = std.testing.allocator;
-    const positions = try findUnbalanced(allocator, "'('");
+    // Each bracket is wrapped in single quotes, spaces between them
+    const positions = try findUnbalanced(allocator, "'(' '{' '[' ')' '}' ']'");
     defer allocator.free(positions);
 
-    try std.testing.expectEqual(@as(usize, 1), positions.len);
-    try std.testing.expectEqual(@as(u8, '('), positions[0].bracket);
+    try std.testing.expectEqual(@as(usize, 0), positions.len);
+}
+
+test "handles escaped single-quoted bracket" {
+    const allocator = std.testing.allocator;
+    const positions = try findUnbalanced(allocator, "'\\(' '{'");
+    defer allocator.free(positions);
+
+    try std.testing.expectEqual(@as(usize, 0), positions.len);
 }
 
 test "checks balanced brackets inside comments" {
