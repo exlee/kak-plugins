@@ -82,6 +82,18 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+    const embedded_script_files = b.addWriteFiles();
+    _ = embedded_script_files.addCopyFile(
+        b.path("plugin/kak-unbalanced.kak"),
+        "kak-unbalanced.kak",
+    );
+    const embedded_script_module = b.createModule(.{
+        .root_source_file = embedded_script_files.add(
+            "embedded_script.zig",
+            "pub const content = @embedFile(\"kak-unbalanced.kak\");\n",
+        ),
+    });
+    exe.root_module.addImport("embedded_script", embedded_script_module);
 
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
