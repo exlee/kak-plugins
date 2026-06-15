@@ -3,7 +3,7 @@ use std::{io, process::Stdio, sync::Arc};
 use tokio::process::Command;
 
 use crate::{
-    all_args_start_with_dash, handle_context::Context, kakoune::Kakoune, searchable_args,
+    all_args_start_with_dash, handle_context::Context, kakoune::Kakoune, process, searchable_args,
     string_ext::SplitArgs,
 };
 
@@ -29,15 +29,17 @@ pub async fn process(context: Arc<Context>, args: &[String], kak: &Kakoune) -> i
     all_args_start_with_dash(&splitted_args)?;
     let cwd = context.get_cwd().await.expect("Missing CWD");
 
-    let mut cmd = Command::new(fd_path)
-        .arg("--color=always")
-        .arg("-p")
-        .args(splitted_args)
-        .arg("-tf")
-        .current_dir(cwd)
-        .stdout(Stdio::from(fifo_clone))
-        .spawn()?;
+    let mut command = Command::new(fd_path);
+    let child = process::spawn(
+        command
+            .arg("--color=always")
+            .arg("-p")
+            .args(splitted_args)
+            .arg("-tf")
+            .current_dir(cwd)
+            .stdout(Stdio::from(fifo_clone)),
+    )?;
 
-    cmd.wait().await?;
+    process::supervise(child);
     Ok(())
 }

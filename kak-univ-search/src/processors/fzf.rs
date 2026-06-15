@@ -3,7 +3,7 @@ use std::{io, process::Stdio, sync::Arc};
 use tokio::process::Command;
 
 use crate::{
-    all_args_start_with_dash, handle_context::Context, kakoune::Kakoune, searchable_args,
+    all_args_start_with_dash, handle_context::Context, kakoune::Kakoune, process, searchable_args,
     string_ext::SplitArgs,
 };
 
@@ -41,16 +41,18 @@ pub async fn process(context: Arc<Context>, args: &[String], kak: &Kakoune) -> i
     let cwd = context.get_cwd().await.expect("Missing CWD");
 
     let fzf_env = format!("{} --files", rg_path.to_string_lossy());
-    let mut cmd = Command::new(fzf_path)
-        .arg("--color=16")
-        .arg("-f")
-        .args(splitted_args)
-        .env("FZF_DEFAULT_COMMAND", fzf_env)
-        .current_dir(cwd)
-        .stdout(Stdio::from(fifo_clone))
-        .stderr(Stdio::from(fifo_clone2))
-        .spawn()?;
+    let mut command = Command::new(fzf_path);
+    let child = process::spawn(
+        command
+            .arg("--color=16")
+            .arg("-f")
+            .args(splitted_args)
+            .env("FZF_DEFAULT_COMMAND", fzf_env)
+            .current_dir(cwd)
+            .stdout(Stdio::from(fifo_clone))
+            .stderr(Stdio::from(fifo_clone2)),
+    )?;
 
-    cmd.wait().await?;
+    process::supervise(child);
     Ok(())
 }

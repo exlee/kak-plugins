@@ -11,6 +11,7 @@ use tokio::io::AsyncBufReadExt;
 
 mod handle_context;
 mod kakoune;
+mod process;
 mod processors;
 mod string_ext;
 mod temp_dir;

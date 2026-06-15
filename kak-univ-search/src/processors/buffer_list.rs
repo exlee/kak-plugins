@@ -2,7 +2,7 @@ use std::{io, path::PathBuf, process::Stdio, sync::Arc};
 
 use tokio::process::Command;
 
-use crate::{handle_context::Context, kakoune::Kakoune, string_ext::SplitArgs};
+use crate::{handle_context::Context, kakoune::Kakoune, process, string_ext::SplitArgs};
 
 pub async fn process(context: Arc<Context>, args: &[String], kak: &Kakoune) -> io::Result<()> {
     let rg_path = context.get_tool("rg");
@@ -32,16 +32,17 @@ pub async fn process(context: Arc<Context>, args: &[String], kak: &Kakoune) -> i
     let parent_dir = input_file.parent().expect("No parent dir found");
     let search_input = &args[1];
 
-    let mut cmd = Command::new(rg_path)
-        .args(search_input.split_args())
-        .arg("--color=always")
-        .arg("--smart-case")
-        .arg(&input_file)
-        .current_dir(parent_dir)
-        .stdout(Stdio::from(fifo_clone))
-        .spawn()?;
+    let mut command = Command::new(rg_path);
+    let child = process::spawn(
+        command
+            .args(search_input.split_args())
+            .arg("--color=always")
+            .arg("--smart-case")
+            .arg(&input_file)
+            .current_dir(parent_dir)
+            .stdout(Stdio::from(fifo_clone)),
+    )?;
 
-    cmd.wait().await?;
-
+    process::supervise(child);
     Ok(())
 }
